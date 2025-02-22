@@ -114,7 +114,7 @@ use blenvy::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(BlenvyPlugin::default())
+        .add_plugins(BlenvyPlugin::default())
         .run();
 }
 

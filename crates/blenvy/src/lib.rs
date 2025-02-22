@@ -1,3 +1,5 @@
+#![allow(warnings, unused)]  // remove before publishing
+
 use bevy::{render::primitives::Aabb, utils::HashMap};
 use std::path::PathBuf;
 

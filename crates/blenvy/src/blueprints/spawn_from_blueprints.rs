@@ -153,7 +153,6 @@ pub(super) fn blueprints_prepare_metadata_file_for_spawn(
             .replace(".glb", ".meta.ron")
             .replace(".gltf", ".meta.ron"); // FIXME: horrible
         let mut asset_infos: Vec<AssetLoadTracker> = vec![];
-        //let foo_handle:Handle<BlueprintPreloadAssets> = asset_server.load(metadata_path);
         let untyped_handle = asset_server.load_untyped(metadata_path.clone());
         let asset_id = untyped_handle.id();
 
@@ -166,15 +165,17 @@ pub(super) fn blueprints_prepare_metadata_file_for_spawn(
         });
 
         // add the blueprint spawning marker & co
-        commands.entity(entity).insert((
-            BlueprintAssetsLoadState {
-                all_loaded: false,
-                asset_infos,
-                ..Default::default()
-            },
-            BlueprintMetaLoading,
-            BlueprintSpawning,
-        ));
+        if let Some(mut cmd) = commands.get_entity(entity) {
+            cmd.insert((
+                BlueprintAssetsLoadState {
+                    all_loaded: false,
+                    asset_infos,
+                    ..Default::default()
+                },
+                BlueprintMetaLoading,
+                BlueprintSpawning,
+            ));
+        }
 
         // if the entity has no name, add one based on the blueprint's
         if entity_name.is_none() {
@@ -440,7 +441,13 @@ pub(crate) fn blueprints_check_assets_loading(
 
 pub(crate) fn blueprints_assets_loaded(
     spawn_placeholders: Query<
-        (Entity, &BlueprintInfo, Option<&Transform>, Option<&Name>),
+        // (Entity, &BlueprintInfo, Option<&Transform>, Option<&Name>),
+        (
+            Entity,
+            &BlueprintInfo,
+            Option<(&Transform, &GlobalTransform)>,
+            Option<&Name>,
+        ),
         (
             Added<BlueprintAssetsLoaded>,
             Without<BlueprintAssetsNotLoaded>,
@@ -454,7 +461,7 @@ pub(crate) fn blueprints_assets_loaded(
 
     mut commands: Commands,
 ) {
-    for (entity, blueprint_info, transform, name) in spawn_placeholders.iter() {
+    for (entity, blueprint_info, maybe_transform, name) in spawn_placeholders.iter() {
         /*info!(
             "BLUEPRINT: all assets loaded, attempting to spawn blueprint SCENE {:?} for entity {:?}, id: {:}, parent:{:?}",
             blueprint_info.name, name, entity, original_parent
@@ -485,10 +492,14 @@ pub(crate) fn blueprints_assets_loaded(
         let scene = &blueprint_gltf.named_scenes[main_scene_name];
 
         // transforms are optional, but still deal with them correctly
-        let mut transforms: Transform = Transform::default();
-        if transform.is_some() {
-            transforms = *transform.unwrap();
-        }
+        // let mut transforms: Transform = Transform::default();
+        // if transform.is_some() {
+        //     transforms = *transform.unwrap();
+        // }
+        let (transform, global_transform) = match maybe_transform {
+            Some((transform, global_transform)) => (*transform, *global_transform),
+            None => (Transform::default(), GlobalTransform::default()),
+        };
 
         let mut original_children: Vec<Entity> = vec![];
         if let Ok(c) = all_children.get(entity) {
@@ -515,7 +526,7 @@ pub(crate) fn blueprints_assets_loaded(
 
         commands.entity(entity).insert((
             SceneRoot(scene.clone()),
-            transforms,
+            transform, global_transform,
             OriginalChildren(original_children),
             BlueprintAnimations {
                 // TODO: perhaps swap this out with InstanceAnimations depending on whether we are spawning a level or a simple blueprint
