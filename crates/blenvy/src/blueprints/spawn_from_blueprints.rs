@@ -166,7 +166,7 @@ pub(super) fn blueprints_prepare_metadata_file_for_spawn(
 
         // add the blueprint spawning marker & co
         if let Some(mut cmd) = commands.get_entity(entity) {
-            cmd.insert((
+            cmd.try_insert((
                 BlueprintAssetsLoadState {
                     all_loaded: false,
                     asset_infos,
