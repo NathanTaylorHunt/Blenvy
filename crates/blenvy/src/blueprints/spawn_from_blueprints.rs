@@ -181,7 +181,7 @@ pub(super) fn blueprints_prepare_metadata_file_for_spawn(
         if entity_name.is_none() {
             commands
                 .entity(entity)
-                .insert(bevy::prelude::Name::from(blueprint_info.name.clone()));
+                .try_insert(bevy::prelude::Name::from(blueprint_info.name.clone()));
         }
 
         if original_parent.is_none() {
@@ -191,10 +191,10 @@ pub(super) fn blueprints_prepare_metadata_file_for_spawn(
                 if let Some(original_visibility) = original_visibility {
                     commands
                         .entity(entity)
-                        .insert(OriginalVisibility(*original_visibility));
+                        .try_insert(OriginalVisibility(*original_visibility));
                 }
                 // & now hide the instance until it is ready
-                commands.entity(entity).insert(Visibility::Hidden);
+                commands.entity(entity).try_insert(Visibility::Hidden);
             }
 
             // only allow automatically adding a newly spawned blueprint instance to the "world", if the entity does not have a parent
@@ -238,7 +238,7 @@ pub(crate) fn blueprints_check_assets_metadata_files_loading(
             if all_loaded {
                 commands
                     .entity(entity)
-                    .insert(BlueprintMetaHandle(asset_server.load(tracker.path.clone())))
+                    .try_insert(BlueprintMetaHandle(asset_server.load(tracker.path.clone())))
                     .remove::<BlueprintAssetsLoadState>();
                 break;
             }
