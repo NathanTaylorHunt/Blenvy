@@ -366,7 +366,7 @@ pub(super) fn blueprints_prepare_spawn(
         // now insert load tracker
         // if there are assets to load
         if !asset_infos.is_empty() {
-            commands.entity(entity).insert((
+            commands.entity(entity).try_insert((
                 BlueprintAssetsLoadState {
                     all_loaded: false,
                     asset_infos,
@@ -375,12 +375,12 @@ pub(super) fn blueprints_prepare_spawn(
                 BlueprintAssetsNotLoaded,
             ));
         } else {
-            commands.entity(entity).insert(BlueprintAssetsLoaded);
+            commands.entity(entity).try_insert(BlueprintAssetsLoaded);
         }
 
         commands
             .entity(entity)
-            .insert(BlueprintMetaLoaded)
+            .try_insert(BlueprintMetaLoaded)
             .remove::<BlueprintMetaLoading>()
             .remove::<BlueprintMetaHandle>();
     }
@@ -433,7 +433,7 @@ pub(crate) fn blueprints_check_assets_loading(
 
             commands
                 .entity(entity)
-                .insert(BlueprintAssetsLoaded)
+                .try_insert(BlueprintAssetsLoaded)
                 .remove::<BlueprintAssetsNotLoaded>();
         }
     }
@@ -524,7 +524,7 @@ pub(crate) fn blueprints_assets_loaded(
         //println!("Named animations : {:?}", named_animations.keys());
         //println!("ANIMATION INFOS: {:?}", animation_infos);
 
-        commands.entity(entity).insert((
+        commands.entity(entity).try_insert((
             SceneRoot(scene.clone()),
             transform, global_transform,
             OriginalChildren(original_children),
@@ -596,7 +596,7 @@ pub(crate) fn blueprints_scenes_spawned(
                     );
                     commands
                         .entity(entity)
-                        .insert(SubBlueprintSpawnRoot(parent)); // Injecting to know which entity is the root
+                        .try_insert(SubBlueprintSpawnRoot(parent)); // Injecting to know which entity is the root
                     break;
                 }
             }
@@ -616,7 +616,7 @@ pub(crate) fn blueprints_scenes_spawned(
                                     all_names.get(parent)
                                 );*/
 
-                                commands.entity(child).insert(SubBlueprintSpawnRoot(entity)); // Injecting to know which entity is the root
+                                commands.entity(child).try_insert(SubBlueprintSpawnRoot(entity)); // Injecting to know which entity is the root
 
                                 tracker_data.insert(child, false);
 
@@ -638,16 +638,16 @@ pub(crate) fn blueprints_scenes_spawned(
                     }
                 }
                 // Mark all components as "Disabled" (until Bevy gets this as first class feature)
-                commands.entity(child).insert(BlueprintInstanceDisabled);
+                commands.entity(child).try_insert(BlueprintInstanceDisabled);
             }
         }
 
         if tracker_data.keys().len() > 0 {
-            commands.entity(entity).insert(SubBlueprintsSpawnTracker {
+            commands.entity(entity).try_insert(SubBlueprintsSpawnTracker {
                 sub_blueprint_instances: tracker_data.clone(),
             });
         } else {
-            commands.entity(entity).insert(BlueprintChildrenReady);
+            commands.entity(entity).try_insert(BlueprintChildrenReady);
         }
     }
 }
@@ -713,7 +713,7 @@ pub(crate) fn blueprints_cleanup_spawned_scene(
         // we flag all children of the blueprint instance with 'FromBlueprint'
         // can be usefull to filter out anything that came from blueprints vs normal children
         for child in all_children.iter_descendants(blueprint_root_entity) {
-            commands.entity(child).insert(FromBlueprint); // we do this here in order to avoid doing it to normal children
+            commands.entity(child).try_insert(FromBlueprint); // we do this here in order to avoid doing it to normal children
         }
 
         // copy components into from blueprint instance's blueprint_root_entity to original entity
@@ -745,13 +745,13 @@ pub(crate) fn blueprints_cleanup_spawned_scene(
                     // BUT we still want to have some marker/control at the root entity level, we add this
                     commands
                         .entity(original)
-                        .insert((BlueprintAnimationPlayerLink(entity_with_player),)); // FIXME : this is only valid for per-blueprint logic, no per scene animations
+                        .try_insert((BlueprintAnimationPlayerLink(entity_with_player),)); // FIXME : this is only valid for per-blueprint logic, no per scene animations
 
                     // since v0.14 you need both AnimationTransitions and AnimationGraph components/handle on the same entity as the animationPlayer
                     let transitions = AnimationTransitions::new();
                     commands
                         .entity(entity_with_player)
-                        .insert((transitions, AnimationGraphHandle(animations.graph.clone())));
+                        .try_insert((transitions, AnimationGraphHandle(animations.graph.clone())));
                 }
             }
             // FIXME VERY convoluted, but it works
@@ -765,7 +765,7 @@ pub(crate) fn blueprints_cleanup_spawned_scene(
                             all_names.get(child),
                             all_names.get(original)
                         );
-                        commands.entity(original).insert(
+                        commands.entity(original).try_insert(
                             //BlueprintAnimationPlayerLink(bla),
                             BlueprintAnimationInfosLink(child),
                         );
@@ -780,7 +780,7 @@ pub(crate) fn blueprints_cleanup_spawned_scene(
                                 );
                                 println!("INSERTING SCENE ANIMATIONS INTO");*/
                                 let original_animations = anims.get(original).unwrap();
-                                commands.entity(child).insert((
+                                commands.entity(child).try_insert((
                                     InstanceAnimationPlayerLink(parent),
                                     InstanceAnimations {
                                         named_animations: original_animations
@@ -794,7 +794,7 @@ pub(crate) fn blueprints_cleanup_spawned_scene(
                             if with_animation_infos.get(parent).is_ok() {
                                 commands
                                     .entity(child)
-                                    .insert(InstanceAnimationInfosLink(parent));
+                                    .try_insert(InstanceAnimationInfosLink(parent));
                             }
                         }
                     }
@@ -805,7 +805,7 @@ pub(crate) fn blueprints_cleanup_spawned_scene(
         commands
             .entity(original)
             .remove::<BlueprintChildrenReady>() // we are done with this step, we can remove the `BlueprintChildrenReady` tag component
-            .insert(BlueprintReadyForPostProcess); // Tag the entity so any systems dealing with post processing can know it is now their "turn"
+            .try_insert(BlueprintReadyForPostProcess); // Tag the entity so any systems dealing with post processing can know it is now their "turn"
 
         commands.entity(blueprint_root_entity).despawn_recursive(); // Remove the root entity that comes from the spawned-in scene
     }
@@ -855,7 +855,7 @@ pub(crate) fn blueprints_finalize_instances(
             .remove::<BlueprintAssetsLoadState>() // also clear the sub assets tracker to free up handles, perhaps just freeing up the handles and leave the rest would be better ?
             .remove::<BlueprintAssetsLoaded>()
             .remove::<OriginalChildren>() // we do not need to keep the original children information
-            .insert(BlueprintInstanceReady);
+            .try_insert(BlueprintInstanceReady);
 
         // Deal with sub blueprints
         // now check if the current entity is a child blueprint instance of another entity
@@ -897,9 +897,9 @@ pub(crate) fn blueprints_finalize_instances(
 
         if hide_until_ready.is_some() {
             if let Some(original_visibility) = original_visibility {
-                commands.entity(entity).insert(original_visibility.0);
+                commands.entity(entity).try_insert(original_visibility.0);
             } else {
-                commands.entity(entity).insert(Visibility::Inherited);
+                commands.entity(entity).try_insert(Visibility::Inherited);
             }
         }
 
